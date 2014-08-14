@@ -1,3 +1,5 @@
+# require './Board'
+
 class Piece
 	attr_accessor :pos, :board, :king
 	attr_reader :color, :dr
@@ -21,7 +23,7 @@ class Piece
 		end
 	end
 
-	def moves 
+	def slide_moves 
 		moves = []
 		deltas.each do |dr|
 			[1, -1].each do |dc|
@@ -42,7 +44,7 @@ class Piece
 		#if the move is legal
 		if !in_bounds?(end_pos)
 			raise "You cannot move out of bounds"
-		elsif !(moves.include?(end_pos))
+		elsif !(slide_moves.include?(end_pos))
 			raise "That move is out range for that piece"
 		elsif !(board.grid[end_pos[0]][end_pos[1]].nil?)
 			raise "Cannot move to an occuppied space"
@@ -51,65 +53,68 @@ class Piece
 		end
 	end
 
+	def jump_moves
+		moves = []
+		deltas.each do |dr|
+			[1, -1].each do |dc|
+				move = [pos[0] + dr * 2, pos[1] + dc * 2]
+
+				if in_bounds?(move) && board.grid[move[0]][move[1]].nil?
+					
+					enemy_bool = !(board.grid[pos[0] + dr][pos[1] + dc].nil?) && (board.grid[pos[0] + dr][pos[1] + dc].color != color)
+
+					moves << move if enemy_bool
+				end
+			end
+		end
+		moves
+	end
+
 	def perform_jump(end_pos)
+		if !in_bounds?(end_pos)
+			raise "You cannot move out of bounds"
+		end
+
+		jumped_pos = [((pos[0] + end_pos[0]) / 2), ((pos[1] + end_pos[1]) / 2)]
+		jumped_piece = board.grid[jumped_pos[0]][jumped_pos[1]] 
+
+		if !(board.grid[end_pos[0]][end_pos[1]].nil?)
+			raise "Cannot jump to an occuppied space"
+		elsif jumped_piece.nil?
+			raise "Cannot jump an empty space"
+		elsif jumped_piece.color == color
+			raise "Cannot jump your own piece"
+		elsif !(jump_moves.include?(end_pos))
+			raise "That move is out range for that piece"
+		else
+			board.grid[jumped_pos[0]][jumped_pos[1]] = nil
+			force_move(end_pos)
+		end
 	end
 
 	def force_move(end_pos)
 		board.grid[pos[0]][pos[1]] = nil
-		pos = end_pos
+		@pos = end_pos
 		board.grid[end_pos[0]][end_pos[1]] = self
+		promote
+		# puts "board.grid[pos[0]][pos[1]] = #{ board.grid[pos[0]][pos[1]].pos }"
+		# puts "should be #{ end_pos }"
 	end
 
-	def promote?
-	end
+	def promote
+		back_row = color == :red ? 7 : 0
 
-	def to_s
-		color.to_s[0]
-	end
-end
-
-class Board
-	attr_accessor :grid
-
-	def initialize(setup = true)
-		@grid = Array.new(8) { Array.new (8) } 
-		setup_board if setup
-	end
-
-	def to_s
-		grid.map do |row|
-			row.map do |col|
-				col.nil? ? " " : col
-			end.join(' ') + "\n"
-		end.reverse.join 
-	end
-
-	def setup_board
-		setup(:red)
-		setup(:black)
-	end
-
-	def setup(color)
-		start_row = color == :red ? 0 : 5
-
-		(start_row..start_row + 2).each do |row|
-			(0..7).each do |col|
-				if (col.even? && row.even?) || (col.odd? && row.odd?)
-					grid[row][col] = Piece.new(self, [row, col], color)
-				end
-			end
+		if pos[0] == back_row && king == false
+			puts "king me!"
+			@king = true
 		end
 	end
 
-	def move(start, end_pos)
-		grid[start[0]][start[1]].perform_slide(end_pos)
+	def to_s
+		king ? color[0].to_s.upcase : color[0].to_s
 	end
-
 end
 
-b = Board.new
-puts b
-puts "value at [2, 0] #{ b.grid[2][0] }"
-puts "moves for [2,0] #{ b.grid[2][0].moves }"
-b.move([2, 0], [3, 1])
-puts b
+#BUG: tried setting instance variables with attr_accessor methods within same class
+#CAN'T DO THAT!
+#Have to set their values with direct calls to @variable
