@@ -37,19 +37,31 @@ class Board
 		@grid[start[0]][start[1]].perform_slide(end_pos)
 	end
 
+	def dup
+		board_copy = self.class.new(false)
+		get_pieces.each do |piece|
+			piece_copy = Piece.new(board_copy, piece.pos, piece.color, piece.king)
+			board_copy.grid[piece_copy.pos[0]][piece_copy.pos[1]] = piece_copy
+		end
+		board_copy
+	end
+
+	def get_pieces
+		grid.flatten.compact
+	end
+
 end
 
 b = Board.new
+
 puts b
 puts ""
 b.move([2, 0], [3, 1])
 puts b
-puts "b.grid[3][1].pos = #{ b.grid[3][1].pos }"
 puts ""
 b.move([5, 3], [4, 2])
 puts b
 puts ""
-puts "b.grid[3][1].pos = #{ b.grid[3][1].pos }"
 b.grid[3][1].perform_jump([5,3])
 puts b
 puts ""
@@ -59,6 +71,14 @@ b.move([7, 1], [6, 2])
 b.grid[5][3].perform_jump([7, 1])
 puts b
 puts ""
+b.move([7,3], [6,2])
+b.move([5,5], [4,4])
+puts b
+puts ""
+b.grid[7][1].perform_moves([[5,3],[3,5]])
+puts b
+
+
 
 # puts "value at [2, 0] #{ b.grid[2][0] }"
 # puts "moves for [2,0] #{ b.grid[2][0].moves }"

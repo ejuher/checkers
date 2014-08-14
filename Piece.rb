@@ -1,14 +1,14 @@
-# require './Board'
+require './InvalidMoveError'
 
 class Piece
 	attr_accessor :pos, :board, :king
 	attr_reader :color, :dr
 
-	def initialize(board, pos, color)
+	def initialize(board, pos, color, king = false)
 		@board = board
 		@pos = pos
 		@color = color
-		@king = false
+		@king = king
 	end
 
 	def in_bounds?(pos)
@@ -28,10 +28,6 @@ class Piece
 		deltas.each do |dr|
 			[1, -1].each do |dc|
 				move = [pos[0] + dr, pos[1] + dc]
-				# puts "pos = #{ pos }"
-				# puts "dr = #{ dr }"
-				# puts "move = #{ move }" 
-				#move is in bounds and not occuppied
 				if in_bounds?(move) && board.grid[move[0]][move[1]].nil?
 					moves << move 
 				end
@@ -43,11 +39,11 @@ class Piece
 	def perform_slide(end_pos)
 		#if the move is legal
 		if !in_bounds?(end_pos)
-			raise "You cannot move out of bounds"
+			raise InvalidMoveError.new "You cannot move out of bounds"
 		elsif !(slide_moves.include?(end_pos))
-			raise "That move is out range for that piece"
+			raise InvalidMoveError.new "That move is out range for that piece"
 		elsif !(board.grid[end_pos[0]][end_pos[1]].nil?)
-			raise "Cannot move to an occuppied space"
+			raise InvalidMoveError.new "Cannot move to an occuppied space"
 		else
 			force_move(end_pos)
 		end
@@ -79,29 +75,58 @@ class Piece
 		jumped_piece = board.grid[jumped_pos[0]][jumped_pos[1]] 
 
 		if !(board.grid[end_pos[0]][end_pos[1]].nil?)
-			raise "Cannot jump to an occuppied space"
+			raise InvalidMoveError.new "Cannot jump to occuppied space at #{end_pos}"
 		elsif jumped_piece.nil?
-			raise "Cannot jump an empty space"
+			raise InvalidMoveError.new "Cannot jump to empty space at at #{end_pos} from #{pos}"
 		elsif jumped_piece.color == color
-			raise "Cannot jump your own piece"
+			raise InvalidMoveError.new "Cannot jump your own piece at #{jumped_pos}"
 		elsif !(jump_moves.include?(end_pos))
-			raise "That move is out range for that piece"
+			raise InvalidMoveError.new "The move #{end_pos} is out range for the piece at #{pos}"
 		else
 			board.grid[jumped_pos[0]][jumped_pos[1]] = nil
 			force_move(end_pos)
 		end
 	end
 
+	def perform_moves!(move_seq)
+		if move_seq.length == 1
+			perform_slide(move_seq[0]) 
+		else
+			#dup the board?
+			move_seq.each do |move|
+				begin
+					perform_jump(move)
+				rescue InvalidMoveError => e
+					puts "Illegal Move: #{e.message}" 
+				end
+			end
+		end
+	end
+
+	def valid_move_seq?(move_seq)
+		board_copy = board.dup
+		begin
+			board_copy.grid[pos[0]][pos[1]].perform_moves!(move_seq)
+		rescue InvalidMoveError => e
+			puts "Illegal Move: #{e.message}"
+		  false
+		else
+			true
+		end
+	end
+
+	def perform_moves(move_seq)
+		perform_moves!(move_seq) if valid_move_seq?(move_seq)
+	end
+
 	def force_move(end_pos)
 		board.grid[pos[0]][pos[1]] = nil
 		@pos = end_pos
 		board.grid[end_pos[0]][end_pos[1]] = self
-		promote
-		# puts "board.grid[pos[0]][pos[1]] = #{ board.grid[pos[0]][pos[1]].pos }"
-		# puts "should be #{ end_pos }"
+		maybe_promote
 	end
 
-	def promote
+	def maybe_promote
 		back_row = color == :red ? 7 : 0
 
 		if pos[0] == back_row && king == false
