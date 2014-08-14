@@ -89,10 +89,13 @@ class Piece
 	end
 
 	def perform_moves!(move_seq)
-		if move_seq.length == 1
-			perform_slide(move_seq[0]) 
+		if move_seq.length == 1 
+			if slide_moves.include?(move_seq[0])
+				perform_slide(move_seq[0]) 
+			else
+				perform_jump(move_seq[0])
+			end
 		else
-			#dup the board?
 			move_seq.each do |move|
 				begin
 					perform_jump(move)
