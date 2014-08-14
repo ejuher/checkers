@@ -1,5 +1,6 @@
 class Piece
-	attr_reader :color
+	attr_accessor :pos, :board, :king
+	attr_reader :color, :dr
 
 	def initialize(board, pos, color)
 		@board = board
@@ -13,14 +14,50 @@ class Piece
 	end
 
 	def deltas
-		dr = :color == :red ? 1 : -1
+		if king
+			@dr = [1, -1]
+		else
+			@dr = color == :red ? [1] : [-1]
+		end
+	end
+
+	def moves 
+		moves = []
+		deltas.each do |dr|
+			[1, -1].each do |dc|
+				move = [pos[0] + dr, pos[1] + dc]
+				# puts "pos = #{ pos }"
+				# puts "dr = #{ dr }"
+				# puts "move = #{ move }" 
+				#move is in bounds and not occuppied
+				if in_bounds?(move) && board.grid[move[0]][move[1]].nil?
+					moves << move 
+				end
+			end
+		end
+		moves
 	end
 
 	def perform_slide(end_pos)
-
+		#if the move is legal
+		if !in_bounds?(end_pos)
+			raise "You cannot move out of bounds"
+		elsif !(moves.include?(end_pos))
+			raise "That move is out range for that piece"
+		elsif !(board.grid[end_pos[0]][end_pos[1]].nil?)
+			raise "Cannot move to an occuppied space"
+		else
+			force_move(end_pos)
+		end
 	end
 
 	def perform_jump(end_pos)
+	end
+
+	def force_move(end_pos)
+		board.grid[pos[0]][pos[1]] = nil
+		pos = end_pos
+		board.grid[end_pos[0]][end_pos[1]] = self
 	end
 
 	def promote?
@@ -65,9 +102,14 @@ class Board
 	end
 
 	def move(start, end_pos)
+		grid[start[0]][start[1]].perform_slide(end_pos)
 	end
 
 end
 
 b = Board.new
+puts b
+puts "value at [2, 0] #{ b.grid[2][0] }"
+puts "moves for [2,0] #{ b.grid[2][0].moves }"
+b.move([2, 0], [3, 1])
 puts b
