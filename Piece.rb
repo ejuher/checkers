@@ -1,4 +1,4 @@
-require './InvalidMoveError'
+class InvalidMoveError < StandardError; end
 
 class Piece
 	attr_accessor :pos, :board, :king
@@ -11,9 +11,11 @@ class Piece
 		@king = king
 	end
 
-	def in_bounds?(pos)
+	def self.in_bounds?(pos)
 		pos[0].between?(0,7) && pos[1].between?(0,7)
 	end
+
+
 
 	def deltas
 		if king
@@ -28,7 +30,7 @@ class Piece
 		deltas.each do |dr|
 			[1, -1].each do |dc|
 				move = [pos[0] + dr, pos[1] + dc]
-				if in_bounds?(move) && board.grid[move[0]][move[1]].nil?
+				if Piece.in_bounds?(move) && board.empty_square?(move)
 					moves << move 
 				end
 			end
@@ -37,12 +39,11 @@ class Piece
 	end
 
 	def perform_slide(end_pos)
-		#if the move is legal
-		if !in_bounds?(end_pos)
+		if !Piece.in_bounds?(end_pos)
 			raise InvalidMoveError.new "You cannot move out of bounds"
 		elsif !(slide_moves.include?(end_pos))
 			raise InvalidMoveError.new "That move is out range for that piece"
-		elsif !(board.grid[end_pos[0]][end_pos[1]].nil?)
+		elsif !(board.empty_square?(end_pos))
 			raise InvalidMoveError.new "Cannot move to an occuppied space"
 		else
 			force_move(end_pos)
@@ -55,9 +56,9 @@ class Piece
 			[1, -1].each do |dc|
 				move = [pos[0] + dr * 2, pos[1] + dc * 2]
 
-				if in_bounds?(move) && board.grid[move[0]][move[1]].nil?
+				if Piece.in_bounds?(move) && board.empty_square?(move)
 					
-					enemy_bool = !(board.grid[pos[0] + dr][pos[1] + dc].nil?) && (board.grid[pos[0] + dr][pos[1] + dc].color != color)
+					enemy_bool = !(board.empty_square?(pos)) && (board.grid[pos[0] + dr][pos[1] + dc].color != color)
 
 					moves << move if enemy_bool
 				end
@@ -67,17 +68,17 @@ class Piece
 	end
 
 	def perform_jump(end_pos)
-		if !in_bounds?(end_pos)
+		if !Piece.in_bounds?(end_pos)
 			raise "You cannot move out of bounds"
 		end
 
 		jumped_pos = [((pos[0] + end_pos[0]) / 2), ((pos[1] + end_pos[1]) / 2)]
 		jumped_piece = board.grid[jumped_pos[0]][jumped_pos[1]] 
 
-		if !(board.grid[end_pos[0]][end_pos[1]].nil?)
+		if !(board.empty_square?(end_pos))
 			raise InvalidMoveError.new "Cannot jump to occuppied space at #{end_pos}"
-		elsif jumped_piece.nil?
-			raise InvalidMoveError.new "Cannot jump to empty space at at #{end_pos} from #{pos}"
+		elsif board.empty_square?(jumped_pos)
+			raise InvalidMoveError.new "Cannot jump because no piece between #{pos} and #{end_pos}"
 		elsif jumped_piece.color == color
 			raise InvalidMoveError.new "Cannot jump your own piece at #{jumped_pos}"
 		elsif !(jump_moves.include?(end_pos))
@@ -111,7 +112,7 @@ class Piece
 		begin
 			board_copy.grid[pos[0]][pos[1]].perform_moves!(move_seq)
 		rescue InvalidMoveError => e
-			puts "Illegal Move: #{e.message}"
+		  puts "Illegal Move: #{e.message}"
 		  false
 		else
 			true

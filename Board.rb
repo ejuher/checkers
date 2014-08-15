@@ -1,10 +1,11 @@
-require './Piece'
+require './piece'
 
 class Board
 	attr_accessor :grid
 
 	def initialize(setup = true)
 		@grid = Array.new(8) { Array.new (8) } 
+		checker
 		setup_board if setup
 	end
 
@@ -18,6 +19,20 @@ class Board
 		end.reverse 
 		display += ["  0 1 2 3 4 5 6 7\n"]
 		display.join
+	end
+
+	def empty_square?(pos)
+		grid[pos[0]][pos[1]] == "■" || grid[pos[0]][pos[1]].nil?
+	end
+
+	def checker
+		(0..7).each do |row|
+			(0..7).each do |col|
+				if (col.even? && row.odd?) || (col.odd? && row.even?)
+					@grid[row][col] = "■"
+				end
+			end
+		end
 	end
 
 	def setup_board
@@ -51,7 +66,7 @@ class Board
 	end
 
 	def get_pieces
-		grid.flatten.compact
+		grid.flatten.select { |space| space.class == Piece }
 	end
 
 	def over?
